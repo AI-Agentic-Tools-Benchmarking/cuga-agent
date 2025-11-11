@@ -19,6 +19,7 @@ from cuga.backend.llm.utils.helpers import load_prompt_simple
 from cuga.config import settings
 from cuga.configurations.instructions_manager import InstructionsManager
 
+
 instructions_manager = InstructionsManager()
 tracker = ActivityTracker()
 var_manager = VariablesManager()

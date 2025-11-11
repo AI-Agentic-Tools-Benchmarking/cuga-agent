@@ -31,10 +31,15 @@ from cuga.backend.cuga_graph.nodes.human_in_the_loop.followup_model import (
 )
 from cuga.backend.cuga_graph.utils.nodes_names import NodeNames, ActionIds
 
+
 instructions_manager = InstructionsManager()
 var_manager = VariablesManager()
 tracker = ActivityTracker()
 llm_manager = LLMManager()
+if settings.advanced_features.enable_fact:
+    from cuga.backend.memory.memory import Memory
+
+    memory = Memory()
 
 
 # --- Minimal tolerant planner parser (handles double-encoded JSON, code fences, minor key typos) ---
@@ -135,6 +140,23 @@ class ApiPlanner(BaseNode):
                     logger.debug(f"Human consultation response received: {human_response}")
                     state.sender = name
 
+        if settings.advanced_features.enable_fact:
+            logger.info("Retrieving facts stored in memory")
+            filters = {
+                "user_id": state.user_id,
+            }
+            retrieved_facts = memory.search_for_facts(
+                namespace_id='memory', query=state.input, filters=filters
+            )
+            if retrieved_facts:
+                for fact in retrieved_facts:
+                    if "variable_name" in fact.content:
+                        mem_dict = json.loads(fact.content)
+                        var_manager.add_variable(
+                            name=mem_dict.get("variable_name"),
+                            description=mem_dict.get("description", ""),
+                            value=mem_dict.get("value"),
+                        )
         # First time visit
         if (
             state.api_last_step

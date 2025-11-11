@@ -36,12 +36,20 @@ run_pytest() {
     TEST_EXIT_CODE=$((TEST_EXIT_CODE | $?))
 }
 
+# Helper function to run pytest with memory dependencies installed
+run_pytest_with_memory() {
+    # Sync memory dependency groups before running tests
+    uv sync --group memory
+    uv run pytest "$@" -v
+    TEST_EXIT_CODE=$((TEST_EXIT_CODE | $?))
+}
+
 # Check for test type flag
 if [ "$1" = "full_tests" ]; then
     echo "Running full tests (registry + e2e system tests + variables manager tests)..."
     rm ./src/cuga/backend/tools_env/registry/mcp_servers/saved_flows.py
     echo "Running all tests (registry + e2e system tests)..."
-    run_pytest ./src
+    run_pytest_with_memory ./src
 elif [ "$1" = "unit_tests" ]; then
     echo "Running unit tests (registry + variables manager + local sandbox tests)..."
     run_pytest ./src/cuga/backend/tools_env/registry/tests/
@@ -49,12 +57,14 @@ elif [ "$1" = "unit_tests" ]; then
     run_pytest ./src/system_tests/e2e/test_runtime_tools.py
     run_pytest ./src/cuga/backend/tools_env/code_sandbox/tests/
     run_pytest ./src/system_tests/unit/test_sandbox_async.py
+    run_pytest_with_memory ./src/system_tests/unit/test_memory.py
 else
     echo "Running default tests (registry + variables manager + local sandbox + e2e without save_reuse and without sandbox docker)..."
     run_pytest ./src/cuga/backend/tools_env/registry/tests/
     run_pytest ./src/cuga/backend/cuga_graph/nodes/api/variables_manager/tests/
     run_pytest ./src/cuga/backend/tools_env/code_sandbox/tests/
     run_pytest ./src/system_tests/e2e/balanced_test.py ./src/system_tests/e2e/fast_test.py ./src/system_tests/e2e/test_runtime_tools.py
+    run_pytest_with_memory ./src/system_tests/unit/test_memory.py ./src/system_tests/e2e/test_memory_integration.py
 fi
 
 echo "Tests completed with exit code: $TEST_EXIT_CODE"

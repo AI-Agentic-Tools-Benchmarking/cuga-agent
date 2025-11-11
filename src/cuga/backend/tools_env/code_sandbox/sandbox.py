@@ -216,10 +216,9 @@ async def run_local(code_content: str) -> ExecutionResult:
             ):
                 await namespace['__cuga_async_wrapper__']()
     except SystemExit as e:
-        # Handle exit() and quit() calls gracefully
+        # Catch exit() calls to prevent terminating the entire process
         exit_code = e.code if e.code is not None else 0
-        if e.code is not None and e.code != 0:
-            stderr_buffer.write(f"SystemExit: {e.code}")
+        stderr_buffer.write(f"Generated Code called exit with code : {exit_code}")
     except Exception as e:
         exit_code = 1
         stderr_buffer.write(str(e))

@@ -476,6 +476,14 @@ instruction_set = "default"  # or any instruction set above
 
 </details>
 
+<details>
+<summary><em style="color: #666;"> 📹 Optional: Run with memory</em></summary>
+
+1. Change `enable_memory = true` in `setting.toml`
+2. Run `cuga start memory`
+
+</details>
+
 ## 🔧 Advanced Usage
 
 <details>

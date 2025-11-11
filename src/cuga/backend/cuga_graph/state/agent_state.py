@@ -46,6 +46,7 @@ class AgentState(BaseModel):
     next: Optional[str] = ""  # The 'next' field indicates where to route to next
     # pages: Annotated[Sequence[str], operator.add]  # List of pages traversed
     # page: Page  # The Playwright web page lets us interact with the web environment
+    user_id: Optional[str] = "default"  # TODO: this should be updated in multi user scenario
     current_datetime: Optional[str] = ""
     current_app: Optional[str] = None
     current_app_description: Optional[str] = None

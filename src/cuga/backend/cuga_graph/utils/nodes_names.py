@@ -20,6 +20,7 @@ class NodeNames:
     PLAN_CONTROLLER_AGENT = "PlanControllerAgent"
     FINAL_ANSWER_AGENT = "FinalAnswerAgent"
     TASK_ANALYZER_AGENT = "TaskAnalyzerAgent"
+    MEMORY_AGENT = "MemoryAgent"
 
 
 # Action IDs

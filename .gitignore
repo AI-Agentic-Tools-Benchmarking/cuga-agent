@@ -23,6 +23,7 @@ trajectory
 cuga-dashboard
 logging/trajectory_data
 logging/
+dbs/
 debug_extractions/
 debug_extractions_websocket/
 # Ignore dynaconf secret files

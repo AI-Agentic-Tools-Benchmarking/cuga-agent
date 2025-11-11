@@ -1,20 +1,22 @@
 import copy
+import json
 import os
 import shutil
-import json
-import pandas as pd
 from datetime import datetime
-from typing import List, Optional, Any, Dict
+from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
+
+from cuga.backend.cuga_graph.nodes.api.code_agent.model import CodeAgentOutput
+
+from cuga.backend.tools_env.registry.utils.types import AppDefinition
+from cuga.backend.utils.id_utils import mask_with_timestamp, random_id_with_timestamp
+from cuga.config import TRAJECTORY_DATA_DIR, settings
 from langchain_core.tools import StructuredTool
+from loguru import logger
 from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel, Field
-from loguru import logger
-
-from cuga.config import TRAJECTORY_DATA_DIR, settings
-from cuga.backend.tools_env.registry.utils.types import AppDefinition
-from cuga.backend.utils.id_utils import random_id_with_timestamp, mask_with_timestamp
-from cuga.backend.cuga_graph.nodes.api.code_agent.model import CodeAgentOutput
 
 AGENT_ANALYTICS = True
 try:
@@ -59,6 +61,7 @@ class TasksMetadata(BaseModel):
 
 class ActivityTracker(object):
     _instance = None
+    user_id: str = ""
     intent: str = ""
     session_id: str = ""
     dataset_name: str = ""
@@ -79,6 +82,10 @@ class ActivityTracker(object):
     tasks: Dict[str, Dict[str, Any]] = {}
     experiment_folder: Optional[str] = None
     tasks_metadata: Optional[TasksMetadata] = None
+    if settings.advanced_features.enable_memory:
+        from cuga.backend.memory.memory import Memory
+
+        memory = Memory()
 
     # Base directory configuration
     _base_dir: str = TRAJECTORY_DATA_DIR
@@ -366,6 +373,7 @@ class ActivityTracker(object):
         self.final_answer = None
         self.task_id = task_id
         self.intent = intent
+        self.user_id = None
 
     def reload_steps(self, task_id: Optional[str] = None) -> bool:
         """
@@ -470,6 +478,15 @@ class ActivityTracker(object):
         # Reset tasks dictionary
         self.tasks = {}
 
+        if settings.advanced_features.enable_memory:
+            from cuga.backend.memory.agentic_memory.client.exceptions import NamespaceNotFoundException
+
+            try:
+                self.memory.get_namespace_details(namespace_id="memory")
+            except NamespaceNotFoundException:
+                self.memory.create_namespace(namespace_id="memory")
+            self.memory.create_run(namespace_id="memory", run_id=self.experiment_folder)
+
         return self.experiment_folder
 
     def _initialize_experiment_files(self, experiment_dir: str) -> None:
@@ -539,6 +556,16 @@ class ActivityTracker(object):
 
         except Exception:
             pass
+
+        if settings.advanced_features.enable_memory:
+            from cuga.backend.memory.agentic_memory.utils.prompts import prompts
+
+            self.memory.add_step(
+                namespace_id='memory',
+                run_id=self.experiment_folder,
+                step=step.model_dump(),
+                prompt=prompts[step.name],
+            )
 
         # Attach any collected prompts to this step so they are persisted
         if getattr(self, "prompts", None):
@@ -624,6 +651,11 @@ class ActivityTracker(object):
         step.prompts = copy.deepcopy(self.prompts)
         self.prompts = []
         self.steps.append(step)
+
+        if settings.advanced_features.enable_memory and step.name == "FinalAnswerAgent":
+            # End run and execute any background processing.
+            self.memory.end_run(namespace_id="memory", run_id=self.experiment_folder)
+
         if settings.advanced_features.tracker_enabled:
             self.to_file()
         self.prompts = []

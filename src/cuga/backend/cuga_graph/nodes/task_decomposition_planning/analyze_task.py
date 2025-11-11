@@ -50,7 +50,7 @@ class TaskAnalyzer(BaseNode):
     @staticmethod
     async def match_apps(
         agent: TaskAnalyzerAgent,
-        intent: str,
+        state: AgentState,
         mode: Literal['api', 'web', 'hybrid'],
         web_app_name: Optional[str] = "N/A",
         web_description: Optional[str] = "N/A",
@@ -66,6 +66,7 @@ class TaskAnalyzer(BaseNode):
         Returns:
             Matched applications based on mode and intent
         """
+        intent = state.input
         # Common initialization
         if mode == 'api' or mode == 'hybrid':
             apps = await get_apps()
@@ -84,12 +85,23 @@ class TaskAnalyzer(BaseNode):
                 ], AppMatch(relevant_apps=[apps[0].name, web_app_name], thoughts=[])
             logger.debug(f"All available apps: {[p for p in apps]}")
             if len(settings.features.forced_apps) == 0:
+                # memory integration
+                rtrvd_tips_formatted = None
+                if settings.advanced_features.enable_memory:
+                    from cuga.backend.memory.agentic_memory.utils.memory_tips_formatted import (
+                        get_formatted_tips,
+                    )
+
+                    rtrvd_tips_formatted = get_formatted_tips(
+                        namespace_id="memory", agent_id='TaskAnalyzerAgent', query=intent, limit=3
+                    )
                 res: AppMatch = await agent.match_apps_task.ainvoke(
                     input={
                         "inp": {
                             "intent": intent,
                             "available_apps": [{"name": p.name, "description": p.description} for p in apps],
-                        }
+                        },
+                        "memory": rtrvd_tips_formatted,
                     }
                 )
             else:
@@ -133,7 +145,7 @@ class TaskAnalyzer(BaseNode):
         if not state.sender or state.sender == "ChatAgent":
             state.api_intent_relevant_apps, app_matches = await TaskAnalyzer.match_apps(
                 agent,
-                state.input,
+                state,
                 settings.advanced_features.mode,
                 state.current_app,
                 state.current_app_description,

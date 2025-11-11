@@ -10,6 +10,7 @@ start_url = "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
 
 [features]
 cuga_mode = "balanced"
+memory_provider = "mem0"
 
 [advanced_features]
 web_arena_eval = false
@@ -23,6 +24,9 @@ mode = 'api'
 use_extension = false
 code_planner_enabled = true
 api_planner_hitl = false
+enable_memory = false
+enable_fact = false
+
 
 [server_ports]
 registry = 8001
@@ -36,3 +40,4 @@ petstore_api = 8081
 graph_visualization = 8080
 orchestrate_url = 4321
 trm_url = 8080
+memory = 8888
